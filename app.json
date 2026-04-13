@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "To Do List",
+    "slug": "expoai-todo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#F8FAFC"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.concombredemer.expoai-todo"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F8FAFC"
+      }
+    }
+  }
+}
