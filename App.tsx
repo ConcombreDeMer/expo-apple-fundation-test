@@ -106,69 +106,42 @@ export default function App() {
     setErrorMessage(null);
   };
 
-  const handleAssistantAction = (action: AppleAITaskAction): string => {
-    if (action.type === 'create') {
-      const newTask: Task = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        title: action.title,
-        completed: false,
-        createdAt: Date.now(),
-      };
+  const handleAssistantActions = (actions: AppleAITaskAction[]) => {
+    setTasks((currentTasks) => {
+      let nextTasks = [...currentTasks];
 
-      setTasks((currentTasks) => [newTask, ...currentTasks]);
-      setErrorMessage(null);
-      return `tâche créée: ${action.title}`;
-    }
-
-    if (action.type === 'edit') {
-      let wasUpdated = false;
-
-      setTasks((currentTasks) =>
-        currentTasks.map((task) => {
-          if (task.id !== action.taskId) {
-            return task;
-          }
-
-          wasUpdated = true;
-          return { ...task, title: action.title };
-        }),
-      );
-      setErrorMessage(null);
-      return wasUpdated ? `tâche modifiée: ${action.title}` : 'tâche introuvable';
-    }
-
-    if (action.type === 'delete') {
-      let wasDeleted = false;
-
-      setTasks((currentTasks) =>
-        currentTasks.filter((task) => {
-          const shouldKeep = task.id !== action.taskId;
-
-          if (!shouldKeep) {
-            wasDeleted = true;
-          }
-
-          return shouldKeep;
-        }),
-      );
-      setErrorMessage(null);
-      return wasDeleted ? 'tâche supprimée' : 'tâche introuvable';
-    }
-
-    let wasCompleted = false;
-
-    setTasks((currentTasks) =>
-      currentTasks.map((task) => {
-        if (task.id !== action.taskId) {
-          return task;
+      for (const action of actions.slice(0, 10)) {
+        if (action.type === 'create') {
+          const newTask: Task = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            title: action.title,
+            completed: false,
+            createdAt: Date.now(),
+          };
+          nextTasks = [newTask, ...nextTasks];
+          continue;
         }
 
-        wasCompleted = true;
-        return { ...task, completed: true };
-      }),
-    );
+        if (action.type === 'edit') {
+          nextTasks = nextTasks.map((task) =>
+            task.id === action.taskId ? { ...task, title: action.title } : task,
+          );
+          continue;
+        }
+
+        if (action.type === 'delete') {
+          nextTasks = nextTasks.filter((task) => task.id !== action.taskId);
+          continue;
+        }
+
+        nextTasks = nextTasks.map((task) =>
+          task.id === action.taskId ? { ...task, completed: true } : task,
+        );
+      }
+
+      return nextTasks;
+    });
     setErrorMessage(null);
-    return wasCompleted ? 'tâche marquée comme faite' : 'tâche introuvable';
   };
 
   const pendingTasksCount = tasks.filter((task) => !task.completed).length;
@@ -244,7 +217,7 @@ export default function App() {
               ListFooterComponent={
                 <AIAssistantPanel
                   tasks={sortedTasks}
-                  onApplyAction={handleAssistantAction}
+                  onApplyActions={handleAssistantActions}
                 />
               }
             />

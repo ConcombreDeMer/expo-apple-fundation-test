@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import NativeAppleAI, {
   type AppleAIAvailability,
   type AppleAIPlannedActionNative,
+  type AppleAIPlannedOperationNative,
   type AppleAINativeTask,
 } from '../../../modules/apple-ai';
 import { Task } from '../../types/task';
@@ -18,7 +19,7 @@ export type AppleAITaskAction =
 
 export type AppleAIAssistantResult = {
   message: string;
-  action: AppleAITaskAction | null;
+  actions: AppleAITaskAction[];
 };
 
 function getNativeModule() {
@@ -142,36 +143,37 @@ export async function rewriteTaskWithAppleAI(title: string): Promise<string> {
   return getNativeModule().rewriteTask(trimmedTitle);
 }
 
-function normalizePlannedAction(
-  plan: AppleAIPlannedActionNative,
+function normalizeOperation(
+  operation: AppleAIPlannedOperationNative,
   tasks: Task[],
 ): AppleAITaskAction | null {
-  if (plan.action === 'none') {
+  if (operation.action === 'none') {
     return null;
   }
 
-  if (plan.action === 'create') {
-    const title = plan.title?.trim();
+  if (operation.action === 'create') {
+    const title = operation.title?.trim();
     return title ? { type: 'create', title } : null;
   }
 
-  const taskIndex = typeof plan.taskIndex === 'number' ? plan.taskIndex - 1 : -1;
+  const taskIndex =
+    typeof operation.taskIndex === 'number' ? operation.taskIndex - 1 : -1;
   const targetTask = tasks[taskIndex];
 
   if (!targetTask) {
     return null;
   }
 
-  if (plan.action === 'edit') {
-    const title = plan.title?.trim();
+  if (operation.action === 'edit') {
+    const title = operation.title?.trim();
     return title ? { type: 'edit', taskId: targetTask.id, title } : null;
   }
 
-  if (plan.action === 'delete') {
+  if (operation.action === 'delete') {
     return { type: 'delete', taskId: targetTask.id };
   }
 
-  if (plan.action === 'complete') {
+  if (operation.action === 'complete') {
     return { type: 'complete', taskId: targetTask.id };
   }
 
@@ -195,6 +197,9 @@ export async function runAppleAIAssistant(
 
   return {
     message: plan.assistantMessage.trim(),
-    action: normalizePlannedAction(plan, tasks),
+    actions: plan.operations
+      .slice(0, 10)
+      .map((operation) => normalizeOperation(operation, tasks))
+      .filter((action): action is AppleAITaskAction => action !== null),
   };
 }

@@ -2,6 +2,21 @@ import ExpoModulesCore
 import Foundation
 #if canImport(FoundationModels)
 import FoundationModels
+
+@available(iOS 26.0, *)
+@Generable
+struct AppleAIPlannedOperation {
+  let action: String
+  let taskIndex: Int?
+  let title: String?
+}
+
+@available(iOS 26.0, *)
+@Generable
+struct AppleAIPlannedResponse {
+  let assistantMessage: String
+  let operations: [AppleAIPlannedOperation]
+}
 #endif
 
 struct AppleAITaskRecord: Record {
@@ -59,11 +74,7 @@ public final class AppleAIExpoModule: Module {
 
   private static let assistantInstructions = """
   Tu es un assistant local intégré à une app iPhone de to-do list.
-  Réponds toujours en français.
-  Sois naturel, chaleureux, clair et utile.
-  Écris comme une vraie assistante personnelle, pas comme un système technique.
-  Évite les formulations mécaniques, les libellés robotiques et les comptes-rendus rigides.
-  Préfère des phrases fluides et humaines.
+  Réponds toujours en français. Sois naturel et décontracté.
   Ne fais aucune mention d'un service cloud ou d'un backend.
   """
 
@@ -146,7 +157,7 @@ public final class AppleAIExpoModule: Module {
     )
     let response = try await session.respond(
       to: trimmedPrompt,
-      options: GenerationOptions(temperature: 0.2, maximumResponseTokens: 220)
+      options: GenerationOptions(temperature: 0.75)
     )
     return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
 #else
@@ -194,21 +205,21 @@ public final class AppleAIExpoModule: Module {
       instructions: """
       Tu transformes des notes courtes en tâches actionnables.
       Réponds en français.
-      Chaque élément doit être une tâche courte, concrète et exécutable.
-      N'ajoute aucune explication hors de la liste demandée.
+      Transforme les notes en tâches claires, naturelles et vraiment utiles.
+      Les formulations peuvent être un peu plus vivantes tant qu'elles restent actionnables.
       """
     )
 
     let response = try await session.respond(
       to: """
       Transforme ces notes en une liste de tâches actionnables.
-      Ne garde que les tâches utiles et évite les doublons.
+      Garde les tâches utiles, évite les doublons et reformule proprement si besoin.
 
       Notes:
       \(trimmedInput)
       """,
       generating: [String].self,
-      options: GenerationOptions(temperature: 0.1, maximumResponseTokens: 180)
+      options: GenerationOptions(temperature: 0.6)
     )
 
     return response.content
@@ -258,41 +269,20 @@ public final class AppleAIExpoModule: Module {
       model: model,
       instructions: """
       Tu es l'assistant local d'une app de to-do list iPhone.
-      Réponds toujours en français.
-      Ton ton doit être humain, fluide et naturel, comme une assistante personnelle attentive.
-      N'utilise jamais de formulations mécaniques comme "Action effectuée", "Tâche créée", "Suppression réalisée" ou des structures trop techniques.
-      Quand tu agis, assistantMessage doit déjà intégrer le résultat de manière naturelle, par exemple en expliquant simplement ce que tu viens de faire.
-      Quand tu réponds sans agir, formule une réponse courte mais agréable à lire.
-      Tu dois décider s'il faut simplement répondre à l'utilisateur ou déclencher une seule action locale.
-      Les seules actions autorisées sont: none, create, edit, delete, complete.
-      Utilise create si l'utilisateur veut créer une tâche.
-      Utilise edit si l'utilisateur veut renommer ou reformuler une tâche existante.
-      Utilise delete si l'utilisateur veut supprimer une tâche.
-      Utilise complete si l'utilisateur veut marquer une tâche comme faite.
-      Utilise none si l'utilisateur demande un résumé, une reformulation libre, des priorités, un avis ou toute autre réponse sans modification directe.
-      Si une action vise une tâche existante, choisis taskIndex à partir de la liste fournie ci-dessous, avec un index commençant à 1.
-      Si tu n'es pas assez sûr, renvoie action = none.
-      assistantMessage doit être court, utile, contextuel et rédigé comme si tu parlais directement à l'utilisateur.
-      Si l'utilisateur te demande une action, réponds comme quelqu'un qui vient de s'en charger.
-      Exemples de style attendus:
-      - "C'est fait, je l'ai ajoutée à ta liste."
-      - "Je viens de reformuler cette tâche pour qu'elle soit plus claire."
-      - "Je l'ai marquée comme terminée."
-      - "Je te résume ça simplement."
-      title est obligatoire pour create et edit, sinon null.
-      taskIndex est obligatoire pour edit, delete et complete, sinon null.
-      """
-    )
+      Réponds toujours en français. Sois naturel et décontracté.
 
-    let schema = GenerationSchema(
-      type: GeneratedContent.self,
-      description: "Décision structurée de l'assistant pour répondre ou agir sur la to-do list.",
-      properties: [
-        .init(name: "action", description: "Une seule action parmi none, create, edit, delete, complete.", type: String.self),
-        .init(name: "assistantMessage", description: "Réponse utilisateur courte en français.", type: String.self),
-        .init(name: "taskIndex", description: "Index 1-based d'une tâche existante si nécessaire, sinon null.", type: Int?.self),
-        .init(name: "title", description: "Titre final de la tâche à créer ou du nouveau titre si edit, sinon null.", type: String?.self)
-      ]
+      Tu dois décider s'il faut répondre ou déclencher des actions locales.
+      Les seules actions autorisées sont : none, create, edit, delete, complete.
+      
+      Règles d'action :
+      - create : nécessite "title"
+      - edit, delete, complete : nécessitent "taskIndex" (index commençant à 1)
+      - none : aucune action
+      
+      La sortie doit contenir :
+      - assistantMessage : ta réponse naturelle
+      - operations : une liste d'opérations (max 10)
+      """
     )
 
     let response = try await session.respond(
@@ -303,26 +293,30 @@ public final class AppleAIExpoModule: Module {
       Tâches actuelles:
       \(formatTasksForDecision(tasks))
       """,
-      schema: schema,
-      includeSchemaInPrompt: true,
-      options: GenerationOptions(temperature: 0.1, maximumResponseTokens: 220)
+      generating: AppleAIPlannedResponse.self,
+      options: GenerationOptions(temperature: 0.75)
     )
 
     let content = response.content
-    let action = try content.value(String.self, forProperty: "action")
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-      .lowercased()
-    let assistantMessage = try content.value(String.self, forProperty: "assistantMessage")
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    let taskIndex = try content.value(Int?.self, forProperty: "taskIndex")
-    let title = try content.value(String?.self, forProperty: "title")?
-      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let assistantMessage = content.assistantMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+    let operations = Array(content.operations.prefix(10)).map { operation in
+      [
+        "action": normalizeAction(operation.action),
+        "taskIndex": operation.taskIndex,
+        "title": operation.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+      ]
+    }
+
+    let finalMessage: String
+    if shouldFallbackToDirectReply(assistantMessage) {
+      finalMessage = try await generateFallbackReply(input: trimmedInput, tasks: tasks)
+    } else {
+      finalMessage = assistantMessage
+    }
 
     return [
-      "action": normalizeAction(action),
-      "assistantMessage": assistantMessage,
-      "taskIndex": taskIndex,
-      "title": title?.isEmpty == true ? nil : title
+      "assistantMessage": finalMessage,
+      "operations": operations
     ]
 #else
     throw Exception(
@@ -335,8 +329,9 @@ public final class AppleAIExpoModule: Module {
 
   private static func buildSummaryPrompt(from tasks: [AppleAITaskRecord]) -> String {
     """
-    Résume la liste de tâches suivante en 3 à 5 lignes maximum.
-    Mets d'abord les points importants, puis les éventuels blocages.
+    Fais un vrai résumé naturel de la liste de tâches suivante.
+    Tu peux reformuler, regrouper les idées, souligner ce qui ressort le plus et mentionner les éventuels points d'attention.
+    Le résultat doit être utile, agréable à lire et pas télégraphique.
 
     Tâches:
     \(formatTasks(tasks))
@@ -345,8 +340,8 @@ public final class AppleAIExpoModule: Module {
 
   private static func buildPrioritiesPrompt(from tasks: [AppleAITaskRecord]) -> String {
     """
-    À partir de la liste de tâches suivante, propose exactement 3 priorités du jour.
-    Réponds avec 3 lignes courtes commençant chacune par "- ".
+    À partir de la liste de tâches suivante, propose les 3 priorités les plus pertinentes pour aujourd'hui.
+    Présente-les de façon naturelle, comme si tu conseillais directement l'utilisateur.
     Favorise les tâches non terminées, concrètes et à fort impact.
 
     Tâches:
@@ -356,8 +351,8 @@ public final class AppleAIExpoModule: Module {
 
   private static func buildRewritePrompt(for title: String) -> String {
     """
-    Reformule cette tâche en une seule phrase courte, claire et actionnable.
-    Retourne uniquement la tâche reformulée.
+    Reformule cette tâche de façon plus claire, plus naturelle et plus agréable à lire.
+    Garde une tournure actionnable.
 
     Tâche:
     \(title.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -402,6 +397,41 @@ public final class AppleAIExpoModule: Module {
     default:
       return "none"
     }
+  }
+
+  private static func shouldFallbackToDirectReply(_ message: String) -> Bool {
+    let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.isEmpty {
+      return true
+    }
+
+    let lowered = trimmed.lowercased()
+    return lowered == "voici un résumé de tes tâches :"
+      || lowered == "voici un résumé de tes taches :"
+      || lowered.hasSuffix(":")
+  }
+
+  private static func generateFallbackReply(input: String, tasks: [AppleAITaskRecord]) async throws -> String {
+    try await generateText(
+      prompt: """
+      Réponds à ce message utilisateur de façon naturelle, complète et utile.
+      Ne fais pas d'introduction vide.
+      Si l'utilisateur demande un résumé, donne directement le résumé.
+      Si l'utilisateur demande une reformulation, donne directement la reformulation.
+      Garde un ton cool, humain et légèrement familier.
+      Tu peux développer un peu si ça rend la réponse meilleure.
+
+      Message utilisateur:
+      \(input)
+
+      Tâches actuelles:
+      \(formatTasksForDecision(tasks))
+      """,
+            instructions: """
+      Tu es un assistant de to-do list.
+      Réponds toujours en français. Sois naturel et décontracté.
+      """
+    )
   }
 
   private static func message(for error: Error) -> String {

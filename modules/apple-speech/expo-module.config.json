@@ -1,0 +1,7 @@
+{
+  "platforms": ["apple"],
+  "apple": {
+    "modules": ["AppleSpeechExpoModule"],
+    "podspecPath": "apple-speech.podspec"
+  }
+}

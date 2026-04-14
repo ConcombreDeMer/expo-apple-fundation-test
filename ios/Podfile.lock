@@ -22,6 +22,29 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - apple-speech (1.0.0):
+    - ExpoModulesCore
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - EXConstants (55.0.14):
     - ExpoModulesCore
   - Expo (55.0.15):
@@ -1897,6 +1920,7 @@ PODS:
 
 DEPENDENCIES:
   - apple-ai (from `../modules/apple-ai`)
+  - apple-speech (from `../modules/apple-speech`)
   - EXConstants (from `../node_modules/expo/node_modules/expo-constants/ios`)
   - Expo (from `../node_modules/expo`)
   - ExpoAsset (from `../node_modules/expo/node_modules/expo-asset/ios`)
@@ -1986,6 +2010,8 @@ DEPENDENCIES:
 EXTERNAL SOURCES:
   apple-ai:
     :path: "../modules/apple-ai"
+  apple-speech:
+    :path: "../modules/apple-speech"
   EXConstants:
     :path: "../node_modules/expo/node_modules/expo-constants/ios"
   Expo:
@@ -2158,6 +2184,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   apple-ai: 6c224675dc122223488b11b82a4c42868a8ec859
+  apple-speech: 82a2fa790a66c006c984e1bdf3234730afbc2893
   EXConstants: bfe4ae4e5d882e2e0b130e049665d0af4f4cc1b8
   Expo: a43f44ff1e3a1c73fcabba766e13a38dea22236a
   ExpoAsset: dc4f25f84886120f82b23233bba563ea7afa88f5

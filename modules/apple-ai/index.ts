@@ -12,11 +12,15 @@ export type AppleAIAvailability = {
   reason: string | null;
 };
 
-export type AppleAIPlannedActionNative = {
+export type AppleAIPlannedOperationNative = {
   action: 'none' | 'create' | 'edit' | 'delete' | 'complete';
-  assistantMessage: string;
   taskIndex?: number | null;
   title?: string | null;
+};
+
+export type AppleAIPlannedActionNative = {
+  assistantMessage: string;
+  operations: AppleAIPlannedOperationNative[];
 };
 
 export type AppleAINativeModule = {

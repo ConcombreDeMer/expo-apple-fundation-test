@@ -8,6 +8,8 @@ import {
   View,
 } from 'react-native';
 
+import { HoldToTalkButton } from './HoldToTalkButton';
+import { useSpeechToText } from '../hooks/useSpeechToText';
 import {
   getAppleAIAvailability,
   runAppleAIAssistant,
@@ -17,15 +19,19 @@ import { Task } from '../types/task';
 
 type AIAssistantPanelProps = {
   tasks: Task[];
-  onApplyAction: (action: AppleAITaskAction) => string;
+  onApplyActions: (actions: AppleAITaskAction[]) => void;
 };
 
-export function AIAssistantPanel({ tasks, onApplyAction }: AIAssistantPanelProps) {
+export function AIAssistantPanel({ tasks, onApplyActions }: AIAssistantPanelProps) {
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [availabilityMessage, setAvailabilityMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const speechToText = useSpeechToText({
+    locale: 'fr-FR',
+    onTextChange: setPrompt,
+  });
 
   useEffect(() => {
     const checkAvailability = async () => {
@@ -42,8 +48,8 @@ export function AIAssistantPanel({ tasks, onApplyAction }: AIAssistantPanelProps
 
     try {
       const response = await runAppleAIAssistant(prompt, tasks);
-      if (response.action) {
-        onApplyAction(response.action);
+      if (response.actions.length > 0) {
+        onApplyActions(response.actions);
       }
       setResult(response.message);
       setPrompt('');
@@ -79,9 +85,27 @@ export function AIAssistantPanel({ tasks, onApplyAction }: AIAssistantPanelProps
         editable={!isLoading && !isUnavailable}
       />
 
+      <View style={styles.speechRow}>
+        <HoldToTalkButton
+          state={speechToText.state}
+          disabled={!speechToText.isAvailable || isLoading || isUnavailable}
+          onPressIn={() => {
+            setErrorMessage(null);
+            void speechToText.start();
+          }}
+          onPressOut={() => {
+            void speechToText.stop();
+          }}
+        />
+        <Text style={styles.speechHint}>
+          Maintiens pour dicter ta demande a l'assistant local.
+        </Text>
+      </View>
+
       {availabilityMessage ? (
         <Text style={styles.infoText}>{availabilityMessage}</Text>
       ) : null}
+      {speechToText.error ? <Text style={styles.errorText}>{speechToText.error}</Text> : null}
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
       <Pressable
@@ -143,6 +167,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 21,
     color: '#0F172A',
+  },
+  speechRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  speechHint: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#64748B',
   },
   submitButton: {
     alignItems: 'center',

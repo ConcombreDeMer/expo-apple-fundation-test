@@ -11,7 +11,11 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.concombredemer.expoai-todo"
+      "bundleIdentifier": "com.concombredemer.expoai-todo",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Le microphone permet de dicter une nouvelle tache a la voix.",
+        "NSSpeechRecognitionUsageDescription": "La reconnaissance vocale Apple permet de transcrire votre voix dans le champ de tache."
+      }
     },
     "android": {
       "adaptiveIcon": {
